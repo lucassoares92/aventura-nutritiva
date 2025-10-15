@@ -1,0 +1,72 @@
+/* Define a fonte Inter (padrão Google) */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap");
+body {
+  font-family: "Inter", sans-serif;
+}
+
+/* Estilos específicos para a pista - AGORA ESTÁTICA */
+#game-area {
+  position: relative;
+  height: 80vh; /* Ocupa 80% da altura da viewport */
+  width: 100%;
+  max-width: 450px; /* Limite de largura para simular a pista do celular */
+  overflow: hidden;
+  /* Manter as bordas para delimitar as pistas */
+  border-left: 2px dashed #0d47a1;
+  border-right: 2px dashed #0d47a1;
+  /* Fundo estático */
+  background-color: #0d47a1;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+#child {
+  position: absolute;
+  bottom: 50px;
+  font-size: 4rem; /* Tamanho do emoji da criança */
+  transition: left 0.15s ease-out, color 0.1s ease-in-out; /* Transição suave entre as pistas e cor para dano */
+  z-index: 10;
+}
+
+.food-item {
+  position: absolute;
+  top: -100px; /* Começa acima da tela */
+  font-size: 3rem;
+  opacity: 1;
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+  pointer-events: none; /* Ignora cliques */
+  z-index: 5;
+}
+
+/* Estilo para a pontuação flutuante */
+.floating-score {
+  position: absolute;
+  color: #4caf50; /* Verde vibrante */
+  font-size: 2rem;
+  font-weight: bold;
+  text-shadow: 1px 1px 2px #fff;
+  pointer-events: none;
+  animation: floatUp 0.8s ease-out forwards;
+  z-index: 20;
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-50px);
+    opacity: 0;
+  }
+}
+
+/* Posições fixas das pistas (0, 1, 2) */
+.lane-0 {
+  left: 15%;
+}
+.lane-1 {
+  left: 45%;
+}
+.lane-2 {
+  left: 75%;
+}
