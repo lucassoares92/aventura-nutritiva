@@ -4,6 +4,7 @@ const gameAreaEl = document.getElementById("game-area");
 const scoreEl = document.getElementById("score");
 const livesEl = document.getElementById("lives");
 const gameOverModal = document.getElementById("game-over-modal");
+const pauseModal = document.getElementById("pause-modal");
 const finalScoreEl = document.getElementById("final-score");
 const setupModal = document.getElementById("setup-modal");
 const startGameBtn = document.getElementById("start-game-btn");
@@ -13,6 +14,7 @@ let currentLane = 1; // 0: Esquerda, 1: Centro, 2: Direita
 let score = 0;
 let lives = 3;
 let isGameOver = false;
+let isPaused = false;
 let baseSpeed = 4; // Velocidade base em pixels por frame
 let speedMultiplier = 1;
 let spawnRate = 2000; // Tempo em ms entre spawns (inicial)
@@ -57,6 +59,10 @@ let badSound;
 let selectSound; // Som para seleção de personagem
 let startSound; // Som para início de jogo
 let bgmLoop; // Loop para a BGM (agora contém a melodia principal e de Game Over)
+
+// Variáveis para controle de toque/swipe
+let touchStartX = 0;
+const SWIPE_THRESHOLD = 50; // Mínimo de pixels para ser considerado um swipe
 
 // Configura os sons que serão usados no jogo
 function setupAudio() {
@@ -221,6 +227,28 @@ window.startGame = function () {
   updateDifficulty(); // Chama para inicializar a dificuldade
   gameLoop(0); // Inicia o loop do jogo
 };
+// Função para alternar o estado de pause
+window.togglePause = function () {
+  if (isGameOver || setupModal.classList.contains("hidden") === false) return;
+
+  isPaused = !isPaused;
+
+  if (isPaused) {
+    // Pausar: Para o loop do jogo e o transporte de áudio
+    pauseModal.classList.remove("hidden");
+    cancelAnimationFrame(gameLoopId);
+    if (Tone.Transport.state === "started") {
+      Tone.Transport.pause();
+    }
+  } else {
+    // Continuar: Reinicia o loop do jogo e o transporte de áudio
+    pauseModal.classList.add("hidden");
+    gameLoop(performance.now());
+    if (Tone.Transport.state === "paused") {
+      Tone.Transport.start();
+    }
+  }
+};
 
 // Função para atualizar a posição visual da criança
 function updateChildPosition() {
@@ -231,7 +259,7 @@ function updateChildPosition() {
 // --- 1. Controle de Movimento da Criança ---
 
 function moveChild(direction) {
-  if (isGameOver) return;
+  if (isGameOver || isPaused) return;
 
   if (direction === "left" && currentLane > 0) {
     currentLane--;
@@ -243,7 +271,15 @@ function moveChild(direction) {
 
 // Event Listeners do Teclado
 document.addEventListener("keydown", (e) => {
-  if (isGameOver || setupModal.classList.contains("hidden") === false) return;
+  if (setupModal.classList.contains("hidden") === false) return;
+  if (isGameOver) return;
+  // Verifica a tecla ESC para pause/resume
+  if (e.key === "Escape") {
+    togglePause();
+    return;
+  }
+  // Impede movimento se estiver pausado
+  if (isPaused) return;
 
   if (e.key === "ArrowLeft") {
     moveChild("left");
@@ -253,15 +289,46 @@ document.addEventListener("keydown", (e) => {
 });
 
 // Event Listeners dos Botões (Mobile/Toque)
-document
-  .getElementById("move-left")
-  .addEventListener("click", () => moveChild("left"));
-document
-  .getElementById("move-right")
-  .addEventListener("click", () => moveChild("right"));
+document.getElementById("move-left").addEventListener("click", () => {
+  if (isPaused) return;
+  moveChild("left");
+});
+document.getElementById("move-right").addEventListener("click", () => {
+  if (isPaused) return;
+  moveChild("right");
+});
+// --- Implementação do Swipe (Toque na Tela) ---
+gameAreaEl.addEventListener("touchstart", (e) => {
+  // Apenas registra o início do toque se o jogo não estiver pausado ou terminado
+  if (
+    isGameOver ||
+    isPaused ||
+    setupModal.classList.contains("hidden") === false
+  )
+    return;
+  touchStartX = e.touches[0].clientX;
+});
+gameAreaEl.addEventListener("touchend", (e) => {
+  if (
+    isGameOver ||
+    isPaused ||
+    setupModal.classList.contains("hidden") === false
+  )
+    return;
+
+  const touchEndX = e.changedTouches[0].clientX;
+  const deltaX = touchEndX - touchStartX;
+
+  if (Math.abs(deltaX) > SWIPE_THRESHOLD) {
+    if (deltaX < 0) {
+      moveChild("left");
+    } else {
+      moveChild("right");
+    }
+  }
+});
 
 // --- 2. Geração e Movimento dos Alimentos ---
-
 function updateDifficulty() {
   // Aumenta a velocidade e a taxa de spawn a cada 50 pontos
   speedMultiplier = 1 + Math.floor(score / 50) * 0.15;
